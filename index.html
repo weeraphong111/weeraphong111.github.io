@@ -2,7 +2,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GIF → CPP</title>
+<title>🔃Images → CPP</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔃</text></svg>">
+
 <style>
 :root {
   --bg: #0b1020;
@@ -160,6 +162,36 @@ input[type="file"]::file-selector-button {
 }
 input[type="file"]::file-selector-button:hover { background: rgba(79, 140, 255, 0.22); }
 
+.mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 18px;
+  background: var(--panel-2);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+.tab-btn {
+  background: transparent;
+  border: 0;
+  color: var(--mute);
+  padding: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  margin-top: 0;
+}
+.tab-btn.active {
+  background: var(--acc);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(79,140,255,0.3);
+}
+
+.mode-content { display: none; }
+.mode-content.active { display: block; }
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -219,7 +251,6 @@ progress {
 }
 progress::-webkit-progress-bar { background: var(--line); border-radius: 6px; }
 progress::-webkit-progress-value { background: linear-gradient(90deg, var(--acc), #7c3aed); border-radius: 6px; }
-progress::-moz-progress-bar { background: linear-gradient(90deg, var(--acc), #7c3aed); border-radius: 6px; }
 
 #msg { font-size: 13px; padding: 12px 16px; border-radius: var(--radius-sm); display: none; font-weight: 500; }
 #msg:not(:empty) { display: block; animation: fadeIn 0.25s ease; }
@@ -227,28 +258,6 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--acc), #7c
 .bad { background: var(--bad-soft); color: var(--bad); border: 1px solid rgba(248, 113, 113, 0.25); }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-
-.info-badge { 
-  font-size: 13px;
-  color: var(--mute);
-  background: var(--panel);
-  padding: 12px 16px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--panel-border);
-  backdrop-filter: blur(12px);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.info-badge::before {
-  content: "";
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 0 4px var(--ok-soft);
-  flex-shrink: 0;
-  animation: pulse 2s infinite;
-}
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 @media (max-width: 480px) {
   body { padding: 18px 12px 36px; }
@@ -262,28 +271,40 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--acc), #7c
 
 <main>
   <header>
-    <h1>GIF → CPP</h1>
-    <p class="sub">แปลงไฟล์ GIF ตัดเฟรม ย่อขนาด ปรับแต่งเพื่อส่งเข้า LittleFS ของ ESP32</p>
+    <h1>Images → CPP</h1>
+    <!-- <p class="sub">แปลงไฟล์ GIF หรือรวมภาพนิ่ง (สูงสุด 5 ภาพ) เป็นสไลด์โชว์สำหรับจอกลม ESP32</p> -->
   </header>
-
-  <!-- <div class="info-badge" id="info">กำลังเชื่อมต่อบอร์ด...</div> -->
 
   <div class="app-grid">
     <section>
-      <h2>1. เลือกไฟล์และตั้งค่า</h2>
-      <label for="file">เลือกไฟล์ GIF</label>
-      <input id="file" type="file" accept="image/gif">
+      <h2>1. เลือกรูปแบบและตั้งค่า</h2>
+      
+      <div class="mode-tabs">
+        <button id="tab-gif" class="tab-btn active" onclick="switchMode('gif')">📂 ใช้ไฟล์ GIF</button>
+        <button id="tab-img" class="tab-btn" onclick="switchMode('img')">🖼️ อัปโหลดภาพ (5 ภาพ)</button>
+      </div>
+
+      <div id="mode-gif-box" class="mode-content active">
+        <label for="file">เลือกไฟล์ GIF</label>
+        <input id="file" type="file" accept="image/gif">
+      </div>
+
+      <div id="mode-img-box" class="mode-content">
+        <label for="files">เลือกภาพนิ่ง (สูงสุด 5 ภาพ เลือกทีเดียวได้)</label>
+        <input id="files" type="file" accept="image/*" multiple>
+        <span class="note">ระบบจะเรียงลำดับตามที่ท่านเลือกและนำมาทำเป็นสไลด์โชว์วนลูป</span>
+      </div>
 
       <div class="form-grid">
-        <div>
+        <div id="gif-opts-1">
           <label for="fstart">เฟรมเริ่มต้น</label>
           <input id="fstart" type="number" value="1" min="1">
         </div>
-        <div>
+        <div id="gif-opts-2">
           <label for="fend">เฟรมสิ้นสุด <span style="font-weight:normal">(0=สุดท้าย)</span></label>
           <input id="fend" type="number" value="0" min="0">
         </div>
-        <div>
+        <div id="gif-opts-3">
           <label for="skip">ข้ามเฟรมทุกๆ N</label>
           <select id="skip">
             <option value="0">ไม่ข้าม</option>
@@ -295,9 +316,9 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--acc), #7c
           </select>
         </div>
         <div>
-          <label for="fdelay">Delay time <span id="fps-label" style="color:var(--acc); font-weight:700;">(--- FPS)</span></label>
-          <input id="fdelay" type="number" value="0" min="0" placeholder="0 = ต้นฉบับ">
-          <span class="note">หน่วย 1/100 วิ (ตั้งเพื่อแก้ทุกเฟรม)</span>
+          <label for="fdelay">Delay time <span id="fps-label" style="color:var(--acc); font-weight:700;">(10 FPS)</span></label>
+          <input id="fdelay" type="number" value="10" min="1" placeholder="10 = 0.1 วิ">
+          <span class="note">หน่วย 1/100 วิ (ความเร็วสไลด์/เฟรม)[cite: 2]</span>
         </div>
         <div>
           <label for="size">ขนาดสูงสุด (px)</label>
@@ -326,31 +347,29 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--acc), #7c
         <input id="vname" value="Kraken_GIF">
       </div>
 
-      <button id="conv" class="primary-btn" disabled>แปลงไฟล์ GIF</button>
+      <button id="conv" class="primary-btn" disabled>แปลงไฟล์</button>
     </section>
 
     <div style="display: flex; flex-direction: column; gap: 22px;">
       <section id="res" hidden>
         <h2>2. ผลลัพธ์และพรีวิว</h2>
         <div class="stage-container">
-          <div class="stage"><img id="prev" alt="ตัวอย่าง GIF"></div>
+          <div class="stage"><img id="prev" alt="ตัวอย่างผลลัพธ์"></div>
         </div>
 
         <table>
-          <tr><td>ขนาดเดิม</td><td id="s0"></td></tr>
+          <tr><td>ขนาดต้นฉบับรวม</td><td id="s0"></td></tr>
           <tr><td>ขนาดหลังแปลง</td><td id="s1"></td></tr>
-          <tr><td>จำนวนเฟรม</td><td id="s2"></td></tr>
+          <tr><td>จำนวนเฟรม / ภาพ</td><td id="s2"></td></tr>
           <tr><td>ความกว้าง × สูง</td><td id="s3"></td></tr>
           <tr><td>ขนาดไฟล์ C (.h)</td><td id="s4"></td></tr>
         </table>
 
-        <!-- <button id="up" class="primary-btn">อัปโหลดเข้า LittleFS</button> -->
         <button id="dlh" class="primary-btn">ดาวน์โหลด .h</button>
         <progress id="bar" value="0" max="100" hidden></progress>
 
         <div class="form-grid" style="margin-top: 12px;">
           <button class="alt" id="dlgif">ดาวน์โหลด .gif</button>
-          <!-- <button class="alt" id="dlh">ดาวน์โหลด .h</button> -->
         </div>
       </section>
 
@@ -360,6 +379,41 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--acc), #7c
 </main>
 
 <script>
+/* ---------- ประกาศตัวแปรช่วยเหลือพื้นฐานไว้ด้านบนสุด ---------- */
+const $ = id => document.getElementById(id);
+const kb = n => n >= 1048576 ? (n / 1048576).toFixed(2) + " MB" : (n / 1024).toFixed(1) + " KB";
+const tick = () => new Promise(r => setTimeout(r, 0));
+
+let currentMode = 'gif'; // 'gif' หรือ 'img'
+
+function switchMode(mode) {
+  currentMode = mode;
+  $("tab-gif").className = "tab-btn " + (mode === 'gif' ? 'active' : '');
+  $("tab-img").className = "tab-btn " + (mode === 'img' ? 'active' : '');
+  $("mode-gif-box").className = "mode-content " + (mode === 'gif' ? 'active' : '');
+  $("mode-img-box").className = "mode-content " + (mode === 'img' ? 'active' : '');
+
+  const isGif = (mode === 'gif');
+  $("gif-opts-1").style.display = isGif ? 'block' : 'none';
+  $("gif-opts-2").style.display = isGif ? 'block' : 'none';
+  $("gif-opts-3").style.display = isGif ? 'block' : 'none';
+
+  checkValid();
+}
+
+function checkValid() {
+  if (currentMode === 'gif') {
+    $("conv").disabled = !$("file").files.length;
+  } else {
+    $("conv").disabled = !$("files").files.length;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  $("file").onchange = checkValid;
+  $("files").onchange = checkValid;
+});
+
 /* ---------- GIF decode ---------- */
 function lzwDecode(data, minCode, size) {
   const out = new Uint8Array(size);
@@ -485,7 +539,39 @@ function skipFrames(frames, n) {
   return out;
 }
 
-/* ---------- palette / quantize ---------- */
+async function loadImagesAsFrames(fileList, delayTime) {
+  const files = Array.from(fileList).slice(0, 5);
+  const frames = [];
+  let maxW = 0, maxH = 0;
+
+  const loadedImgs = await Promise.all(files.map(file => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        maxW = Math.max(maxW, img.width);
+        maxH = Math.max(maxH, img.height);
+        resolve(img);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }));
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  for (const img of loadedImgs) {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.clearRect(0, 0, img.width, img.height);
+    ctx.drawImage(img, 0, 0);
+    const imgData = ctx.getImageData(0, 0, img.width, img.height);
+    frames.push({ rgba: imgData.data, delay: delayTime, w: img.width, h: img.height });
+  }
+
+  return { W: maxW || 240, H: maxH || 240, frames };
+}
+
 function buildPalette(frames, nColors) {
   const hist = new Uint32Array(32768);
   for (const f of frames) {
@@ -552,7 +638,6 @@ function quantizeFrames(frames, pal) {
   });
 }
 
-/* ---------- GIF encode ---------- */
 function lzwEncode(idx, minCode) {
   const clear = 1 << minCode, eoi = clear + 1;
   const out = []; let cur = 0, curBits = 0;
@@ -636,28 +721,16 @@ function encodeGIF(w, h, pal, idxFrames, delays) {
   return new Uint8Array(o);
 }
 
-const $ = id => document.getElementById(id);
-const kb = n => n >= 1048576 ? (n / 1048576).toFixed(2) + " MB" : (n / 1024).toFixed(1) + " KB";
-const tick = () => new Promise(r => setTimeout(r, 0));
-let out = null, outInfo = null, freeBytes = 0, curBytes = 0, prevUrl = null;
+let out = null, outInfo = null, prevUrl = null;
 
 function say(t, cls) { const m = $("msg"); m.textContent = t; m.className = cls || ""; }
 
-async function loadInfo() {
-  try {
-    const j = await (await fetch("/info")).json();
-    freeBytes = j.total - j.used; curBytes = j.size;
-    $("info").textContent = (j.has ? "anim.gif (" + kb(j.size) + ")" : "ยังไม่มีไฟล์บนบอร์ด") +
-      "  |  พื้นที่ LittleFS ว่าง " + kb(freeBytes) + " / " + kb(j.total);
-  } catch (e) { $("info").textContent = "ไม่สามารถเชื่อมต่อสถานะบอร์ดได้ (โหมด Offline)"; }
-}
-
-function scaleFrames(frames, W, H, max) {
-  const targetSize = max > 0 ? max : Math.max(W, H);
-  const s = Math.max(targetSize / W, targetSize / H);
-  const w = Math.round(W * s), h = Math.round(H * s);
+function scaleFrames(frames, origW, origH, max) {
+  const targetSize = max > 0 ? max : Math.max(origW, origH);
+  const s = Math.max(targetSize / origW, targetSize / origH);
+  const w = Math.round(origW * s), h = Math.round(origH * s);
   
-  const src = document.createElement("canvas"); src.width = W; src.height = H;
+  const src = document.createElement("canvas"); src.width = origW; src.height = origH;
   const sc = src.getContext("2d");
   const dst = document.createElement("canvas"); dst.width = targetSize; dst.height = targetSize;
   const dc = dst.getContext("2d", { willReadFrequently: true });
@@ -668,9 +741,13 @@ function scaleFrames(frames, W, H, max) {
 
   return {
     w: targetSize, h: targetSize, frames: frames.map(f => {
-      sc.putImageData(new ImageData(f.rgba, W, H), 0, 0);
+      const fW = f.w || origW;
+      const fH = f.h || origH;
+      src.width = fW; src.height = fH;
+      sc.putImageData(new ImageData(f.rgba, fW, fH), 0, 0);
+
       dc.fillStyle = "#000"; dc.fillRect(0, 0, targetSize, targetSize);
-      dc.drawImage(src, 0, 0, W, H, offsetX, offsetY, w, h);
+      dc.drawImage(src, 0, 0, fW, fH, offsetX, offsetY, w, h);
       return { rgba: dc.getImageData(0, 0, targetSize, targetSize).data, delay: f.delay };
     })
   };
@@ -686,30 +763,39 @@ $("fdelay").oninput = () => {
   }
 };
 
-$("file").onchange = () => { $("conv").disabled = !$("file").files.length; };
-
 $("conv").onclick = async () => {
-  const f = $("file").files[0]; if (!f) return;
   $("conv").disabled = true; $("res").hidden = true; out = null;
   try {
-    say("กำลังถอดรหัส GIF..."); await tick();
-    const g = parseGIF(await f.arrayBuffer());
-    let fr = composeFrames(g); const total0 = fr.length;
-    
-    say("กำลังเลือกช่วงเฟรม..."); await tick();
-    fr = sliceFrames(fr, +$("fstart").value, +$("fend").value);
-    const total1 = fr.length;
+    let fr, origW, origH, total0 = 0, total1 = 0, customDelay = +$("fdelay").value || 10;
 
-    say("กำลังข้ามเฟรม..."); await tick();
-    fr = skipFrames(fr, +$("skip").value);
+    if (currentMode === 'gif') {
+      const f = $("file").files[0]; if (!f) return;
+      say("กำลังถอดรหัส GIF..."); await tick();
+      const g = parseGIF(await f.arrayBuffer());
+      origW = g.W; origH = g.H;
+      fr = composeFrames(g); total0 = fr.length;
+      
+      say("กำลังเลือกช่วงเฟรม..."); await tick();
+      fr = sliceFrames(fr, +$("fstart").value, +$("fend").value);
+      total1 = fr.length;
 
-    const customDelay = +$("fdelay").value;
-    if (customDelay > 0) {
-      fr.forEach(f => f.delay = customDelay);
+      say("กำลังข้ามเฟรม..."); await tick();
+      fr = skipFrames(fr, +$("skip").value);
+
+      if (customDelay > 0 && +$("fdelay").value > 0) {
+        fr.forEach(f => f.delay = customDelay);
+      }
+    } else {
+      const files = $("files").files; if (!files.length) return;
+      say("กำลังโหลดภาพนิ่ง..."); await tick();
+      const slideshow = await loadImagesAsFrames(files, customDelay);
+      origW = slideshow.W; origH = slideshow.H;
+      fr = slideshow.frames;
+      total0 = total1 = fr.length;
     }
 
-    say("กำลังย่อและซูมภาพเต็มจอ..."); await tick();
-    const sc = scaleFrames(fr, g.W, g.H, +$("size").value);
+    say("กำลังย่อและปรับขนาดเต็มจอ..."); await tick();
+    const sc = scaleFrames(fr, origW, origH, +$("size").value);
 
     say("กำลังลดสี..."); await tick();
     const pal = buildPalette(sc.frames, +$("cols").value);
@@ -722,13 +808,13 @@ $("conv").onclick = async () => {
     if (prevUrl) URL.revokeObjectURL(prevUrl);
     prevUrl = URL.createObjectURL(new Blob([out], { type: "image/gif" }));
     $("prev").src = prevUrl;
-    $("s0").textContent = kb(f.size);
-    $("s1").textContent = kb(out.length) + " (" + Math.round(out.length * 100 / f.size) + "%)";
-    $("s2").textContent = total0 + " → " + total1 + " → " + sc.frames.length + " เฟรม";
-    $("s3").textContent = g.W + "×" + g.H + " → " + sc.w + "×" + sc.h + " px";
+    $("s0").textContent = currentMode === 'gif' ? kb($("file").files[0].size) : (sc.frames.length + " ภาพนิ่ง");
+    $("s1").textContent = kb(out.length);
+    $("s2").textContent = total0 + (currentMode === 'gif' ? (" → " + total1 + " → ") : " ภาพนิ่ง / ") + sc.frames.length + " เฟรม";
+    $("s3").textContent = origW + "×" + origH + " → " + sc.w + "×" + sc.h + " px";
     $("s4").textContent = "~" + kb(out.length * 6);
     $("res").hidden = false;
-    say("แปลงเสร็จเรียบร้อย! สามารถดูตัวอย่างและอัปโหลดได้เลย", "ok");
+    say("แปลงเสร็จเรียบร้อย! สามารถดาวน์โหลดไฟล์ไปใช้งานได้เลย", "ok");
   } catch (e) { say("แปลงไม่สำเร็จ: " + e.message, "bad"); }
   $("conv").disabled = false;
 };
@@ -737,7 +823,9 @@ function download(name, blob) {
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
 }
+
 $("dlgif").onclick = () => out && download(outInfo.name + ".gif", new Blob([out], { type: "image/gif" }));
+
 $("dlh").onclick = () => {
   if (!out) return;
   const n = outInfo.name, lines = [];
@@ -747,26 +835,6 @@ $("dlh").onclick = () => {
     lines.join(",\n") + "\n};\nconst unsigned int " + n + "_len = " + out.length + ";\n";
   download(n + ".h", new Blob([txt], { type: "text/plain" }));
 };
-
-$("up").onclick = () => {
-  if (!out) return;
-  if (freeBytes > 0 && out.length > freeBytes + curBytes) { say("พื้นที่ LittleFS ไม่พอ ลองข้ามเฟรมเพิ่มหรือลดจำนวนสี", "bad"); return; }
-  const fd = new FormData();
-  fd.append("file", new Blob([out], { type: "image/gif" }), "anim.gif");
-  const x = new XMLHttpRequest();
-  x.open("POST", "/upload");
-  $("bar").hidden = false; $("bar").value = 0; $("up").disabled = true; say("กำลังอัปโหลดไปยัง ESP32...");
-  x.upload.onprogress = e => { if (e.lengthComputable) $("bar").value = e.loaded * 100 / e.total; };
-  x.onload = () => {
-    $("up").disabled = false;
-    if (x.status === 200) { say("อัปโหลดสำเร็จ! จอกำลังแสดงผลไฟล์ใหม่", "ok"); loadInfo(); }
-    else say("อัปโหลดไม่สำเร็จ (รหัสสถานะ: " + x.status + ")", "bad");
-  };
-  x.onerror = () => { $("up").disabled = false; say("ไม่สามารถเชื่อมต่อบอร์ด ESP32 ได้", "bad"); };
-  x.send(fd);
-};
-
-loadInfo();
 </script>
 </body>
 </html>
