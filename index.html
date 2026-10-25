@@ -202,6 +202,7 @@ button.alt {
   font-weight: 600;
 }
 button.alt:hover:not(:disabled) { background: var(--acc-soft); border-color: var(--acc); color: var(--acc); }
+
 button:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; transform: none !important; }
 
 .stage-container { display: flex; justify-content: center; align-items: center; padding: 12px 0 20px; }
@@ -279,7 +280,7 @@ tr:last-child td { border-bottom: 0; }
 <main>
   <header>
     <h1 style="margin-bottom:0px">Images → CPP</h1>
-    <p style="margin: 0px; font-size: 0.6rem; color: var(--mute);">KRAKEN GAUGE</p>
+    <p style="margin: 0px; font-size: 0.6rem;">KRAKEN_GAUGE</p>
   </header>
 
   <!-- กล่องข้อความแจ้งเตือนแบบลอยด้านบนสุด -->
@@ -352,6 +353,15 @@ tr:last-child td { border-bottom: 0; }
               <option value="15">16 สี</option>
             </select>
           </div>
+        </div>
+
+        <!-- ตัวเลือกรูปแบบการเล่นแอนิเมชัน (รวม Reverse / Ping-Pong) -->
+        <div style="margin-top: 16px;">
+          <label for="anim-mode">รูปแบบการเล่นแอนิเมชัน</label>
+          <select id="anim-mode">
+            <option value="normal" selected>ปกติ (1 → N)</option>
+            <option value="pingpong">สลับกลับหลังอัตโนมัติ (Ping-Pong: 1 → N → 1)</option>
+          </select>
         </div>
 
         <div style="margin-top: 16px;">
@@ -548,6 +558,16 @@ function skipFrames(frames, n) {
     else out.push({ rgba: f.rgba, delay: f.delay });
   });
   return out;
+}
+
+// ฟังก์ชันสำหรับทำ Reverse / Ping-Pong (1 → N → 1)
+function pingPongFrames(frames) {
+  if (frames.length <= 2) return frames;
+  const reversed = frames.slice(1, frames.length - 1).reverse().map(f => ({
+    rgba: f.rgba,
+    delay: f.delay
+  }));
+  return frames.concat(reversed);
 }
 
 async function loadImagesAsFrames(fileList, delayTime) {
@@ -815,6 +835,12 @@ $("conv").onclick = async () => {
       origW = slideshow.W; origH = slideshow.H;
       fr = slideshow.frames;
       total0 = total1 = fr.length;
+    }
+
+    // ตรวจสอบและประมวลผลโหมด Reverse / Ping-Pong
+    if ($("anim-mode").value === 'pingpong') {
+      say("กำลังสร้างเฟรมย้อนกลับ (Ping-Pong)..."); await tick();
+      fr = pingPongFrames(fr);
     }
 
     say("กำลังย่อและปรับขนาดเต็มจอ..."); await tick();
